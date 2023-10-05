@@ -63,7 +63,7 @@ export interface NormalizedOptions {
 /**
  * Converts raw VersionBumpOptions to a normalized and sanitized Options object.
  */
-export async function normalizeOptions(raw: VersionBumpOptions): Promise<NormalizedOptions> {
+export async function normalizeOptions(raw: VersionBumpOptions & { oldVersion?: string }): Promise<NormalizedOptions> {
   // Set the simple properties first
   const preid = typeof raw.preid === 'string' ? raw.preid : 'beta'
   const push = Boolean(raw.push)

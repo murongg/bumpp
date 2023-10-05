@@ -8,6 +8,9 @@ import type { Operation } from './operation'
  * An error is thrown if no version number can be found.
  */
 export async function getOldVersion(operation: Operation): Promise<Operation> {
+  if (operation.state.oldVersion)
+    return operation
+
   const { cwd, files } = operation.options
 
   // Check all JSON files in the files list

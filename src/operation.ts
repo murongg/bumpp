@@ -72,19 +72,25 @@ export class Operation {
   /**
    * Private constructor.  Use the `Operation.start()` static method instead.
    */
-  private constructor(options: NormalizedOptions, progress?: ProgressCallback) {
+  private constructor(options: NormalizedOptions, progress?: ProgressCallback, oldVersion?: string) {
     this.options = options
     this._progress = progress
+    if (oldVersion) {
+      this.update({
+        oldVersion,
+        oldVersionSource: 'user',
+      })
+    }
   }
 
   /**
    * Starts a new `versionBump()` operation.
    */
-  public static async start(input: VersionBumpOptions): Promise<Operation> {
+  public static async start(input: VersionBumpOptions & { oldVersion?: string }): Promise<Operation> {
     // Validate and normalize the options
     const options = await normalizeOptions(input)
 
-    return new Operation(options, input.progress)
+    return new Operation(options, input.progress, input.oldVersion)
   }
 
   /**

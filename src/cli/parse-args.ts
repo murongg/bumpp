@@ -15,7 +15,7 @@ export interface ParsedArgs {
   help?: boolean
   version?: boolean
   quiet?: boolean
-  options: VersionBumpOptions
+  options: VersionBumpOptions & { oldVersion?: string }
 }
 
 /**
@@ -42,6 +42,7 @@ export async function parseArgs(): Promise<ParsedArgs> {
       .option('-q, --quiet', 'Quiet mode')
       .option('-v, --version <version>', 'Tagert version')
       .option('-x, --execute <command>', 'Commands to execute after version bumps')
+      .option('--old-version <version>', 'Old version to bump')
       .help()
 
     const result = cli.parse()
@@ -51,19 +52,22 @@ export async function parseArgs(): Promise<ParsedArgs> {
       help: args.help as boolean,
       version: args.version as boolean,
       quiet: args.quiet as boolean,
-      options: await loadBumpConfig({
-        preid: args.preid,
-        commit: !args.noCommit && args.commit,
-        tag: !args.noTag && args.tag,
-        push: args.push,
-        all: args.all,
-        confirm: !args.yes,
-        noVerify: !args.verify,
-        files: [...(args['--'] || []), ...result.args],
-        ignoreScripts: args.ignoreScripts,
-        execute: args.execute,
-        recursive: !!args.recursive,
-      }),
+      options: {
+        ...await loadBumpConfig({
+          preid: args.preid,
+          commit: !args.noCommit && args.commit,
+          tag: !args.noTag && args.tag,
+          push: args.push,
+          all: args.all,
+          confirm: !args.yes,
+          noVerify: !args.verify,
+          files: [...(args['--'] || []), ...result.args],
+          ignoreScripts: args.ignoreScripts,
+          execute: args.execute,
+          recursive: !!args.recursive,
+        }),
+        oldVersion: args.oldVersion,
+      },
     }
 
     // If a version number or release type was specified, then it will mistakenly be added to the "files" array
