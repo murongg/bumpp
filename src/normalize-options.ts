@@ -59,12 +59,13 @@ export interface NormalizedOptions {
   ignoreScripts: boolean
   execute?: string
   customVersion?: VersionBumpOptions['customVersion']
+  currentVersion?: string
 }
 
 /**
  * Converts raw VersionBumpOptions to a normalized and sanitized Options object.
  */
-export async function normalizeOptions(raw: VersionBumpOptions & { oldVersion?: string }): Promise<NormalizedOptions> {
+export async function normalizeOptions(raw: VersionBumpOptions): Promise<NormalizedOptions> {
   // Set the simple properties first
   const preid = typeof raw.preid === 'string' ? raw.preid : 'beta'
   const push = Boolean(raw.push)
@@ -145,5 +146,6 @@ export async function normalizeOptions(raw: VersionBumpOptions & { oldVersion?: 
     ignoreScripts,
     execute,
     customVersion: raw.customVersion,
+    currentVersion: raw.currentVersion,
   }
 }

@@ -9,8 +9,8 @@ type ProgressCallback = (progress: VersionBumpProgress) => void
 
 interface OperationState {
   release: ReleaseType | undefined
-  oldVersionSource: string
-  oldVersion: string
+  currentVersionSource: string
+  currentVersion: string
   newVersion: string
   commitMessage: string
   tagName: string
@@ -37,8 +37,8 @@ export class Operation {
    */
   public readonly state: Readonly<OperationState> = {
     release: undefined,
-    oldVersion: '',
-    oldVersionSource: '',
+    currentVersion: '',
+    currentVersionSource: '',
     newVersion: '',
     commitMessage: '',
     tagName: '',
@@ -55,7 +55,7 @@ export class Operation {
 
     return {
       release: state.release,
-      oldVersion: state.oldVersion,
+      currentVersion: state.currentVersion,
       newVersion: state.newVersion,
       commit: options.commit ? state.commitMessage : false,
       tag: options.tag ? state.tagName : false,
@@ -72,13 +72,13 @@ export class Operation {
   /**
    * Private constructor.  Use the `Operation.start()` static method instead.
    */
-  private constructor(options: NormalizedOptions, progress?: ProgressCallback, oldVersion?: string) {
+  private constructor(options: NormalizedOptions, progress?: ProgressCallback) {
     this.options = options
     this._progress = progress
-    if (oldVersion) {
+    if (options.currentVersion) {
       this.update({
-        oldVersion,
-        oldVersionSource: 'user',
+        currentVersion: options.currentVersion,
+        currentVersionSource: 'user',
       })
     }
   }
@@ -86,11 +86,11 @@ export class Operation {
   /**
    * Starts a new `versionBump()` operation.
    */
-  public static async start(input: VersionBumpOptions & { oldVersion?: string }): Promise<Operation> {
+  public static async start(input: VersionBumpOptions): Promise<Operation> {
     // Validate and normalize the options
     const options = await normalizeOptions(input)
 
-    return new Operation(options, input.progress, input.oldVersion)
+    return new Operation(options, input.progress)
   }
 
   /**
