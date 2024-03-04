@@ -36,7 +36,12 @@ export async function getNewVersion(operation: Operation): Promise<Operation> {
  */
 function getNextVersion(oldVersion: string, bump: BumpRelease): string {
   const oldSemVer = new SemVer(oldVersion)
-  const newSemVer = oldSemVer.inc(bump.type as any, bump.preid)
+
+  const type = bump.type === 'next'
+    ? oldSemVer.prerelease.length ? 'prerelease' : 'patch'
+    : bump.type
+
+  const newSemVer = oldSemVer.inc(type, bump.preid)
 
   if (
     isPrerelease(bump.type)
@@ -58,7 +63,7 @@ function getNextVersion(oldVersion: string, bump: BumpRelease): string {
 /**
  * Returns the next version number for all release types.
  */
-function getNextVersions(oldVersion: string, preid: string): Record<ReleaseType | 'next', string> {
+function getNextVersions(oldVersion: string, preid: string): Record<ReleaseType, string> {
   const next: Record<string, string> = {}
 
   const parse = semver.parse(oldVersion)
@@ -66,11 +71,7 @@ function getNextVersions(oldVersion: string, preid: string): Record<ReleaseType 
     preid = parse?.prerelease[0] || 'preid'
 
   for (const type of releaseTypes)
-    next[type] = semver.inc(oldVersion, type, preid)!
-
-  next.next = parse?.prerelease?.length
-    ? semver.inc(oldVersion, 'prerelease', preid)!
-    : semver.inc(oldVersion, 'patch')!
+    next[type] = getNextVersion(oldVersion, { type, preid })
 
   return next
 }
@@ -85,6 +86,7 @@ async function promptForNewVersion(operation: Operation): Promise<Operation> {
   const release = operation.options.release as PromptRelease
 
   const next = getNextVersions(oldVersion, release.preid)
+  const configCustomVersion = await operation.options.customVersion?.(oldVersion, semver)
 
   const PADDING = 13
   const answers = await prompts([
@@ -92,12 +94,17 @@ async function promptForNewVersion(operation: Operation): Promise<Operation> {
       type: 'autocomplete',
       name: 'release',
       message: `Current version ${c.green(oldVersion)}`,
-      initial: 'next',
+      initial: configCustomVersion ? 'config' : 'next',
       choices: [
         { value: 'major', title: `${'major'.padStart(PADDING, ' ')} ${c.bold(next.major)}` },
         { value: 'minor', title: `${'minor'.padStart(PADDING, ' ')} ${c.bold(next.minor)}` },
         { value: 'patch', title: `${'patch'.padStart(PADDING, ' ')} ${c.bold(next.patch)}` },
         { value: 'next', title: `${'next'.padStart(PADDING, ' ')} ${c.bold(next.next)}` },
+        ...configCustomVersion
+          ? [
+              { value: 'config', title: `${'from config'.padStart(PADDING, ' ')} ${c.bold(configCustomVersion)}` },
+            ]
+          : [],
         { value: 'prepatch', title: `${'pre-patch'.padStart(PADDING, ' ')} ${c.bold(next.prepatch)}` },
         { value: 'preminor', title: `${'pre-minor'.padStart(PADDING, ' ')} ${c.bold(next.preminor)}` },
         { value: 'premajor', title: `${'pre-major'.padStart(PADDING, ' ')} ${c.bold(next.premajor)}` },
@@ -115,7 +122,7 @@ async function promptForNewVersion(operation: Operation): Promise<Operation> {
       },
     },
   ]) as {
-    release: ReleaseType | 'next' | 'none' | 'custom'
+    release: ReleaseType | 'none' | 'custom' | 'config'
     custom?: string
   }
 
@@ -123,13 +130,16 @@ async function promptForNewVersion(operation: Operation): Promise<Operation> {
     ? oldVersion
     : answers.release === 'custom'
       ? cleanVersion(answers.custom!)!
-      : next[answers.release]
+      : answers.release === 'config'
+        ? cleanVersion(configCustomVersion!)
+        : next[answers.release]
 
   if (!newVersion)
     process.exit(1)
 
   switch (answers.release) {
     case 'custom':
+    case 'config':
     case 'next':
     case 'none':
       return operation.update({ newVersion })
